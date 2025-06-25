@@ -1,19 +1,30 @@
 from dotenv import load_dotenv
-from langchain_openai import OpenAI
-from langchain_core.prompts import PromptTemplate
+import os
+# from langchain_openai import OpenAI
+from langchain.chat_models import init_chat_model
 from colorama import Fore
+from langchain_core.prompts import PromptTemplate, ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
 
+# Load environment variables
 load_dotenv()
-llm = OpenAI()
 
-prompt_template = PromptTemplate.from_template("Tell me a joke about a {topic}?")
+# Make sure the API key is set in the environment
+api_key = os.getenv("OPENAI_API_KEY", "")
+os.environ["OPENAI_API_KEY"] = api_key
+
+# Initialize OpenAI with a simple configuration
+# llm = OpenAI(temperature=0.7)
+llm = init_chat_model("gpt-4o-mini", model_provider="openai")
+
+
+prompt_template = ChatPromptTemplate.from_template("Tell me a joke about {topic}?")
+output_parser = StrOutputParser()
 
 def generate(text):
     """ generate text based on the input """
-    prompt = prompt_template.format(topic=text)
-    print(prompt)
-    return llm.invoke(text)
-
+    chain = prompt_template | llm | output_parser
+    return chain.invoke(text)
 
 def start():
     instructions = (
@@ -43,9 +54,10 @@ def ask():
         if user_input == "x":
             start()
         else:
-
             response = generate(user_input)
-            print(Fore.BLUE + f"A: " + response + Fore.RESET)
+            # Extract the content from the AIMessage object
+            response_text = response.content if hasattr(response, 'content') else str(response)
+            print(Fore.BLUE + f"A: " + response_text + Fore.RESET)
             print(Fore.WHITE + "\n-------------------------------------------------")
 
 
